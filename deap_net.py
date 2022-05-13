@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-def get_model_accuracy(model, dataloader, sample_size = float('inf')):
+def get_model_performance(model, dataloader, sample_size = float('inf'), print_values = True):
     correct = 0
     total = 0
     loss = 0
@@ -22,5 +22,8 @@ def get_model_accuracy(model, dataloader, sample_size = float('inf')):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
         accuracy = 100 * correct // total
-    print(f'Accuracy of the network on {total} images: {accuracy} %')
+    if print_values:
+        print(f'Accuracy of the network on {total} images: {accuracy} %')
+        print(f'Loss of the network on {total} images: {loss}')
     return loss, accuracy
+
