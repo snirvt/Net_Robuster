@@ -1,18 +1,13 @@
+import random
 import torch.nn as nn
 import torch
 from deap import gp
 
 
 def protectedDiv(dividend, divisor):
-    try:
-        x=torch.div(dividend, divisor)
-        if torch.isinf(x).item() or torch.isnan(x).item():
-            return 1
-        return x
-    except:
-        print('exception in protected div')
-        return 1
-
+    x = torch.div(dividend, divisor)
+    x = torch.nan_to_num(x, nan=1.0, posinf=1.0, neginf=-1.0)
+    return x
 def get_primitive_set():
     pset = gp.PrimitiveSet("MAIN", 1)
     pset.addPrimitive(torch.max, 2, name="max")
@@ -21,7 +16,7 @@ def get_primitive_set():
     pset.addPrimitive(torch.sub, 2, name="sub")
     pset.addPrimitive(torch.mul, 2, name="mul")
     pset.addPrimitive(protectedDiv, 2, name="protectedDiv")
-    pset.addPrimitive(torch.tanh, 2, name="tanh")
+    pset.addPrimitive(torch.tanh, 1, name="tanh")
     pset.addPrimitive(nn.ReLU(), 1, name="ReLU")
     pset.addPrimitive(nn.LeakyReLU(), 1, name="LeakyReLU")
     pset.addPrimitive(nn.ELU(), 1, name="ELU")
@@ -31,6 +26,6 @@ def get_primitive_set():
     pset.addPrimitive(nn.Hardswish(), 1, name="Hardswish")
     pset.addPrimitive(nn.Softshrink(), 1, name="Softshrink")
     pset.addPrimitive(nn.RReLU(), 1, name="RReLU")
-    # pset.addEphemeralConstant("rand101", lambda: random.randint(-1,1)) # check what this is
+    pset.addEphemeralConstant("rand101", lambda: random.randint(-1,1))
     pset.renameArguments(ARG0='x')
     return pset
