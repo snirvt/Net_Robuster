@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch
 from deap import gp
 
+from torch.nn import Hardtanh
 
 def protectedDiv(dividend, divisor):
     x = torch.div(dividend, divisor)
@@ -10,22 +11,23 @@ def protectedDiv(dividend, divisor):
     return x
 def get_primitive_set():
     pset = gp.PrimitiveSet("MAIN", 1)
-    pset.addPrimitive(torch.max, 2, name="max")
-    pset.addPrimitive(torch.min, 2, name="min")
-    pset.addPrimitive(torch.add, 2, name="add")
-    pset.addPrimitive(torch.sub, 2, name="sub")
-    pset.addPrimitive(torch.mul, 2, name="mul")
-    pset.addPrimitive(protectedDiv, 2, name="protectedDiv")
-    pset.addPrimitive(torch.tanh, 1, name="tanh")
-    pset.addPrimitive(nn.ReLU(), 1, name="ReLU")
-    pset.addPrimitive(nn.LeakyReLU(), 1, name="LeakyReLU")
+    pset.addPrimitive(torch.max, 2, name="MAX")
+    pset.addPrimitive(torch.min, 2, name="MIN")
+    pset.addPrimitive(torch.add, 2, name="ADD")
+    pset.addPrimitive(torch.sub, 2, name="SUB")
+    pset.addPrimitive(torch.mul, 2, name="MUL")
+    pset.addPrimitive(protectedDiv, 2, name="DIV")
+    pset.addPrimitive(torch.tanh, 1, name="TANH")
+    pset.addPrimitive(nn.ReLU(), 1, name="RELU")
+    pset.addPrimitive(nn.LeakyReLU(), 1, name="LEAKYRELU")
     pset.addPrimitive(nn.ELU(), 1, name="ELU")
-    pset.addPrimitive(nn.Hardshrink(), 1, name="Hardshrink")
+    pset.addPrimitive(nn.Hardshrink(), 1, name="HARDSHRINK")
     pset.addPrimitive(nn.CELU(), 1, name="CELU")
-    pset.addPrimitive(nn.Hardtanh(), 1, name="Hardtanh")
-    pset.addPrimitive(nn.Hardswish(), 1, name="Hardswish")
-    pset.addPrimitive(nn.Softshrink(), 1, name="Softshrink")
-    pset.addPrimitive(nn.RReLU(), 1, name="RReLU")
-    pset.addEphemeralConstant("rand101", lambda: random.randint(-1,1))
+    pset.addPrimitive(nn.Hardtanh(), 1, name="HARDTANH")
+    pset.addPrimitive(nn.Hardswish(), 1, name="HARDWISH")
+    pset.addPrimitive(nn.Softshrink(), 1, name="SOFTSHRINK")
+    pset.addPrimitive(nn.RReLU(), 1, name="RRELU")
+    pset.addEphemeralConstant("RAND101", lambda: random.randint(-1,1))
+    pset.addEphemeralConstant("RAND_UNF", lambda: random.uniform(-2,2))
     pset.renameArguments(ARG0='x')
     return pset
