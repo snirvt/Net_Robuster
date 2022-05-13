@@ -1,6 +1,7 @@
 
 
 import torch
+import models.mobile_net as mobile_net
 
 ''' 
 Traverse through the model and put in layer_dict the sub-models, name of activation function 
@@ -26,6 +27,11 @@ def replace_model_activations(layer_dict, activation_list, activation_idx):
     for i in range(len(activation_list)):
         idx = activation_idx[i]
         setattr(layer_dict[idx][0], layer_dict[idx][1], activation_list[i])
+
+
+def get_pre_trained_model(device):
+    model = mobile_net.mobilenet_v2(pretrained=True, device=device)
+    return model
 
 
 class activation_module(torch.nn.Module):
