@@ -4,14 +4,15 @@ import torch
 from torch import tensor,Tensor
 
 from deap_utils import save_activation_location, replace_model_activations, activation_module
-from deap_net import get_model_performance
+from deap_net import get_model_performance, network_score
 
 
 class DeapEvolution():
-    def __init__(self, model, pset, train_dataloader):
+    def __init__(self, model, pset, train_dataloader, validation_dataloader):
         self.model = model
         self.pset = pset
         self.train_dataloader = train_dataloader
+        self.validation_dataloader = validation_dataloader
 
 
     def get_fixed_terminal_lambda(self,code):
@@ -47,7 +48,9 @@ class DeapEvolution():
         replace_model_activations(temp_layer_dict, [func_module]*len(temp_layer_dict), range(len(temp_layer_dict)))
         print(str_ind)
         try:
-            loss, _ = get_model_performance(temp_model, self.train_dataloader, sample_size=256)
+            # loss, _ = get_model_performance(temp_model, self.train_dataloader, sample_size=256)
+            loss, acc = network_score(net = temp_model, train_loader = self.train_dataloader,
+             val_loader=self.validation_dataloader, sample_size=256)
         except:
             print('exception in evaluate_AF_single_restart')
             return torch.tensor([float('inf')])

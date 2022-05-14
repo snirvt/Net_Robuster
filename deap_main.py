@@ -33,7 +33,7 @@ creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
 
 pset = get_primitive_set()
 
-de = DeapEvolution(model, pset, train_dataloader)
+de = DeapEvolution(model, pset, train_dataloader, test_dataloader)
 
 
 toolbox = base.Toolbox()
