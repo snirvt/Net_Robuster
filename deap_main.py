@@ -20,13 +20,23 @@ from CIFAR10 import CIFAR10Data
 from deap_utils import get_pre_trained_model
 from deap_evolution import DeapEvolution
 
+from neural_network import ConvNet_CIFAR10
+
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-model = get_pre_trained_model(device)
+# model = get_pre_trained_model(device)
+
+
+
+
+
 
 train_dataloader = CIFAR10Data().train_dataloader()
 test_dataloader = CIFAR10Data().test_dataloader()
 
+inputs, classes = next(iter(train_dataloader))  
+model = ConvNet_CIFAR10(inputs[0].shape)
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
@@ -37,7 +47,7 @@ de = DeapEvolution(model, pset, train_dataloader, test_dataloader)
 
 
 toolbox = base.Toolbox()
-toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=2)
+toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=4)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
