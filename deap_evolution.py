@@ -4,6 +4,8 @@ import torch
 from torch import tensor,Tensor
 
 from deap_utils import save_activation_location, replace_model_activations, activation_module
+from deap_utils import replace_model_activations_2
+
 from deap_net import get_model_performance, network_score
 
 
@@ -30,6 +32,45 @@ class DeapEvolution():
         return eval(lambda_str_code, self.pset.context, {}), lambda_str_code
 
 
+
+    def train_neural_network(self, net):
+        try:
+            # loss, _ = get_model_performance(temp_model, self.train_dataloader, sample_size=256)
+            loss, acc = network_score(net = net, train_loader = self.train_dataloader,
+             val_loader = self.validation_dataloader, sample_size=256)
+        except:
+            print('exception in train_neural_network')
+            return torch.tensor([float('inf')])
+        return loss
+
+    def evaluate_AF_triple_restart(self, individual, mapper_s, best_coop = []):
+        # https://deap.readthedocs.io/en/master/examples/coev_coop.html?highlight=Coevolution
+        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_base.py
+        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_niche.py
+        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_gen.py
+        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_adapt.py
+        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_evol.py
+        # global model
+        temp_model = deepcopy(self.model)
+        temp_layer_dict = {}
+        save_activation_location(temp_model, temp_layer_dict)
+
+        # func = toolbox.compile(expr=individual)
+        str_ind = str(individual)
+        if 'x' not in str_ind:
+            print('no x in individual')
+            return torch.tensor([float('inf')]) 
+
+        func, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
+        func_module = activation_module(func)
+
+        replace_model_activations_2(temp_layer_dict, func_module, mapper_s)
+        print(str_ind)
+        loss = self.train_neural_network(temp_model)
+        return loss,
+
+
+
     def evaluate_AF_single_restart(self,individual):
         # global model
         temp_model = deepcopy(self.model)
@@ -47,11 +88,6 @@ class DeapEvolution():
 
         replace_model_activations(temp_layer_dict, [func_module]*len(temp_layer_dict), range(len(temp_layer_dict)))
         print(str_ind)
-        try:
-            # loss, _ = get_model_performance(temp_model, self.train_dataloader, sample_size=256)
-            loss, acc = network_score(net = temp_model, train_loader = self.train_dataloader,
-             val_loader=self.validation_dataloader, sample_size=256)
-        except:
-            print('exception in evaluate_AF_single_restart')
-            return torch.tensor([float('inf')])
+        loss = self.train_neural_network(temp_model)
         return loss,
+
