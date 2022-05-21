@@ -59,7 +59,7 @@ class DeapEvolution():
         str_ind = str(individual)
         if 'x' not in str_ind:
             print('no x in individual')
-            return torch.tensor([float('inf')]) 
+            return float('inf'),
 
         func, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
         func_module = activation_module(func)
