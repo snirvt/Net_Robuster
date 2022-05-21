@@ -73,17 +73,23 @@ NGEN = 3
 CXPB = 0.2
 MUTPB = 0.2
 online_learning = False
-CREATE_ORIGINAL_AF_IND=False
+CREATE_ORIGINAL_AF_IND=True
 pop_coop = []
 best_coop = []
 
 for s in range(NUM_SPECIES):
     pop_coop.append(toolbox.population(n=POP_SIZE))
+    if CREATE_ORIGINAL_AF_IND:
+        for layer in mapper[s]:
+            pop_coop[s].append(create_root_tree(layer_dict[layer][-1])[0])
     for ind in pop_coop[s]:
+        ind = pop_coop[s][-1]
         ind.fitness.values = toolbox.evaluate(ind, mapper[s])
     best_coop.append(tools.selBest(pop_coop[s], 1)[0])
     if online_learning:
         pass # set model at pop_coop[s] now
+
+
 
 for g in range(1, NGEN):
     for s in range(NUM_SPECIES):
@@ -95,6 +101,8 @@ for g in range(1, NGEN):
 
         for ind in offsprings_s:
             ind.fitness.values = toolbox.evaluate(ind, mapper[s], best_coop)
+        if online_learning:
+            pass # set model at pop_coop[s] now
 
         # Replace the old population by the offspring
         pop_coop[s] = offsprings_s
