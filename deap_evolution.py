@@ -16,6 +16,10 @@ class DeapEvolution():
         self.train_dataloader = train_dataloader
         self.validation_dataloader = validation_dataloader
 
+    def update_model_AF(self, layer_dict, AF, mapper_s):
+        AF_module = activation_module(AF)
+        replace_model_activations_2(layer_dict, AF_module, mapper_s)
+
 
     def get_fixed_terminal_lambda(self,code):
         # p = '[-]?[\d]+[.,\d]+|[-]?[\d]*[.][\d]+|[-]?[\d]+'
@@ -59,7 +63,7 @@ class DeapEvolution():
         str_ind = str(individual)
         if 'x' not in str_ind:
             print('no x in individual')
-            return float('inf'),
+            return (float('inf'),), temp_model 
 
         func, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
         func_module = activation_module(func)
@@ -67,7 +71,7 @@ class DeapEvolution():
         replace_model_activations_2(temp_layer_dict, func_module, mapper_s)
         print(str_ind)
         loss = self.train_neural_network(temp_model)
-        return loss,
+        return (loss,), temp_model
 
 
 
@@ -80,7 +84,7 @@ class DeapEvolution():
         str_ind = str(individual)
         if 'x' not in str_ind:
             print('no x in individual')
-            return torch.tensor([float('inf')]) 
+            return torch.tensor([float('inf')])
 
 
         func, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
@@ -89,5 +93,5 @@ class DeapEvolution():
         replace_model_activations(temp_layer_dict, [func_module]*len(temp_layer_dict), range(len(temp_layer_dict)))
         print(str_ind)
         loss = self.train_neural_network(temp_model)
-        return loss,
+        return (loss,)
 

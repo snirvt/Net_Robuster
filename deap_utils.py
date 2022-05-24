@@ -23,7 +23,8 @@ setattr(layer_dict[0][0], layer_dict[0][1], nn.SELU())
 # https://stackoverflow.com/questions/58297197/how-to-change-activation-layer-in-pytorch-pretrained-module
 def save_activation_location(model, layer_dict):
     for child_name, child in model.named_children():
-        if child._get_name() in dir(torch.nn.modules.activation):
+        activation_options = dir(torch.nn.modules.activation) + ['ACTIVATION_MODULE']
+        if child._get_name() in activation_options:
             layer_dict[len(layer_dict)] = [model, child_name, child]
         else:
             save_activation_location(child, layer_dict)
@@ -48,14 +49,18 @@ class activation_module(torch.nn.Module):
     def __init__(self, activation):
         super().__init__()
         self.activation = activation
-   
+        activation_module.__name__ = 'ACTIVATION_MODULE'
+        # activation_module.__name__ = str(self.activation)
+        
+    def __str__(self):
+        return str(self.activation)
     def __call__(self, x):
         return self.activation(x)
 
 
 def create_root_tree(func):
     pset = gp.PrimitiveSet("MAIN", 1)
-    pset.addPrimitive(func, 1, name=str(func).replace('(','').replace(')',''))
+    pset.addPrimitive(func, 1, name=str(func).replace('(','').replace(')','').upper())
     pset.renameArguments(ARG0='x')
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)

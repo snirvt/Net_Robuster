@@ -22,6 +22,7 @@ from deap_evolution import DeapEvolution
 
 from neural_network import ConvNet_CIFAR10
 from deap_utils import create_root_tree
+from heapq import heapify, heappush, heappop
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -61,9 +62,10 @@ def condition(height, depth):
     """Expression generation stops when the depth is equal to height."""
     return depth == height
 
-temp_model = deepcopy(model)
+# temp_model = deepcopy(model)
+# save_activation_location(temp_model, layer_dict)
 layer_dict = {}
-save_activation_location(temp_model, layer_dict)
+save_activation_location(model, layer_dict)
 
 mapper = {0:range(0,1),1:range(1,2),2:range(2,3)}
 
@@ -72,8 +74,10 @@ NUM_SPECIES = 3
 NGEN = 3
 CXPB = 0.2
 MUTPB = 0.2
-online_learning = False
+online_learning_AF = False
 CREATE_ORIGINAL_AF_IND=True
+online_learning_AF_WEIGHTS = True
+
 pop_coop = []
 best_coop = []
 
@@ -83,30 +87,38 @@ for s in range(NUM_SPECIES):
         for layer in mapper[s]:
             pop_coop[s].append(create_root_tree(layer_dict[layer][-1])[0])
     for ind in pop_coop[s]:
-        ind = pop_coop[s][-1]
-        ind.fitness.values = toolbox.evaluate(ind, mapper[s])
+        ind.fitness.values, _ = toolbox.evaluate(ind, mapper[s])
     best_coop.append(tools.selBest(pop_coop[s], 1)[0])
-    if online_learning:
-        pass # set model at pop_coop[s] now
 
 
 
 for g in range(1, NGEN):
     for s in range(NUM_SPECIES):
         # Select and clone the offspring
-        offsprings_s = toolbox.select(pop_coop[s], len(pop_coop))
+        offsprings_s = toolbox.select(pop_coop[s], len(pop_coop[s]))
         offsprings_s = [toolbox.clone(ind) for ind in offsprings_s]        
-
         offsprings_s = algorithms.varAnd(offsprings_s, toolbox, cxpb = CXPB, mutpb = MUTPB)
-
+        models = []
         for ind in offsprings_s:
-            ind.fitness.values = toolbox.evaluate(ind, mapper[s], best_coop)
-        if online_learning:
-            pass # set model at pop_coop[s] now
-
+            ind.fitness.values, ind_model = toolbox.evaluate(ind, mapper[s], best_coop)
+            models.append((ind.fitness.values, ind_model))
         # Replace the old population by the offspring
         pop_coop[s] = offsprings_s
         best_coop[s] = tools.selBest(pop_coop[s], 1)[0]
+        _, best_model = min(models)
+        if online_learning_AF:
+            de.update_model_AF(layer_dict, best_coop[s], mapper[s])
+        if online_learning_AF_WEIGHTS:
+            model = best_model
+            de.model = model
+            layer_dict = {}
+            save_activation_location(model, layer_dict)
+
+            
+
+
+
+
 
 
 
