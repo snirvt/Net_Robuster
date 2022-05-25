@@ -47,13 +47,7 @@ class DeapEvolution():
             return torch.tensor([float('inf')])
         return loss
 
-    def evaluate_AF_triple_restart(self, individual, mapper_s, best_coop = []):
-        # https://deap.readthedocs.io/en/master/examples/coev_coop.html?highlight=Coevolution
-        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_base.py
-        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_niche.py
-        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_gen.py
-        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_adapt.py
-        # https://github.com/DEAP/deap/blob/b8513fc16fa05b2fe6b740488114a7f0c5a1dd06/examples/coev/coop_evol.py
+    def evaluate_AF_coop(self, individual, mapper_s, best_coop = []):
         # global model
         temp_model = deepcopy(self.model)
         temp_layer_dict = {}
