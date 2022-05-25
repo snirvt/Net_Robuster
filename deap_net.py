@@ -1,7 +1,9 @@
 import numpy as np
-
+from copy import deepcopy
 import torch
 from torch import nn
+from art.attacks.evasion import FastGradientMethod
+from art.estimators.classification import PyTorchClassifier
 
 
 def get_model_performance(model, dataloader, sample_size = float('inf'), print_values = True):
@@ -33,7 +35,7 @@ def get_model_performance(model, dataloader, sample_size = float('inf'), print_v
 
 
 def network_score(net, train_loader, val_loader, sample_size):
-    n_epochs = 5
+    n_epochs = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     net.to(device)
     criterion = nn.CrossEntropyLoss()
@@ -43,6 +45,8 @@ def network_score(net, train_loader, val_loader, sample_size):
     epochs_train_losses = np.zeros(n_epochs)
     epochs_test_acc = np.zeros(n_epochs)
     epochs_test_losses = np.zeros(n_epochs)
+
+
     for epoch in range(n_epochs):
         train_batch_loss = 0
         test_batch_loss = 0
@@ -64,6 +68,29 @@ def network_score(net, train_loader, val_loader, sample_size):
             train_batch_loss += train_loss.item()
             train_loss.backward()
             optimizer.step()
+
+            ### attack ###
+            classifier = PyTorchClassifier(
+                model=net,
+                # clip_values=(min_pixel_value, max_pixel_value),
+                loss=criterion,
+                optimizer=optimizer,
+                input_shape=tuple(images.shape[1:]),#(3, 32, 32),
+                nb_classes=y_pred.shape[1],
+            )
+            attack = FastGradientMethod(estimator=classifier, eps=0.2)
+            x_attack = attack.generate(x=images.numpy())
+            x_attack = torch.tensor(x_attack).to(device)
+            optimizer.zero_grad()
+            y_pred = net(x_attack)
+            train_loss = criterion(y_pred, labels.to(device))
+            predictions = torch.argmax(y_pred, dim=1)
+            total += labels.shape[0]
+            correct += torch.sum((predictions == labels.to(device)).int())
+            train_batch_loss += train_loss.item()
+            train_loss.backward()
+            optimizer.step()
+
 
         epochs_train_losses[epoch] = train_batch_loss / len(train_loader)
         epochs_train_acc[epoch] = correct / total
@@ -88,6 +115,21 @@ def network_score(net, train_loader, val_loader, sample_size):
                 test_loss = criterion(y_pred, labels.to(device))
                 test_batch_loss += test_loss.item()
 
+                ### attack ###
+
+                with torch.enable_grad():
+                    x_attack = attack.generate(x=images.numpy())
+                x_attack = torch.tensor(x_attack).to(device)
+                y_pred = net(x_attack)
+                test_loss = criterion(y_pred, labels.to(device))
+                predictions = torch.argmax(y_pred, dim=1)
+                test_total += labels.shape[0]
+                test_true += torch.sum((predictions == labels.to(device)).int())
+                test_batch_loss += test_loss.item()
+
+
+
+
             epochs_test_losses[epoch] = test_batch_loss / len(val_loader)
             epochs_test_acc[epoch] = test_true / test_total
             print(f'Test loss for epoch #{epoch}: {epochs_test_losses[epoch]:.4f}')
@@ -98,4 +140,8 @@ def network_score(net, train_loader, val_loader, sample_size):
     best_val_idx = np.argmin(epochs_test_losses)
     print('best accuracy: {}'.format(epochs_test_acc[best_val_idx]))
     return epochs_test_losses[best_val_idx], epochs_test_acc[best_val_idx]
+
+
+
+
 
