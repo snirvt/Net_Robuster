@@ -143,5 +143,49 @@ def network_score(net, train_loader, val_loader, sample_size):
 
 
 
+def get_test_score(net, data_loader):
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    net.eval()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(net.parameters(), lr = 0.01)
+    test_total = 0
+    test_true = 0
+    with torch.no_grad():
+        for images, labels in data_loader:
+            images = images.to(device)
+            y_pred = net(images)
+
+            predictions = torch.argmax(y_pred, dim = 1)
+            test_total += labels.shape[0]
+            test_true += torch.sum((predictions == labels.to(device)).int())
+
+            ### attack ###
+            classifier = PyTorchClassifier(
+                model=net,
+                # clip_values=(min_pixel_value, max_pixel_value),
+                loss=criterion,
+                optimizer=optimizer,
+                input_shape=tuple(images.shape[1:]),#(3, 32, 32),
+                nb_classes=y_pred.shape[1],
+            )
+            
+            attack = FastGradientMethod(estimator=classifier, eps=0.2)
+
+            with torch.enable_grad():
+                x_attack = attack.generate(x=images.numpy())
+            x_attack = torch.tensor(x_attack).to(device)
+            y_pred = net(x_attack)
+            # test_loss = criterion(y_pred, labels.to(device))
+            predictions = torch.argmax(y_pred, dim=1)
+            test_total += labels.shape[0]
+            test_true += torch.sum((predictions == labels.to(device)).int())
+            # test_batch_loss += test_loss.item()
+
+        epochs_test_acc = test_true / test_total
+        return epochs_test_acc.item()
+
+
+
+
 
 
