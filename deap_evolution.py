@@ -3,7 +3,7 @@ import re
 import torch
 from torch import tensor,Tensor
 
-from deap_utils import save_activation_location, replace_model_activations, activation_module
+from deap_utils import save_activation_location, replace_model_activations, activation_module, DyanmicNameActivationClass
 from deap_utils import replace_model_activations_2
 
 from deap_net import get_model_performance, network_score
@@ -17,7 +17,10 @@ class DeapEvolution():
         self.validation_dataloader = validation_dataloader
 
     def update_model_AF(self, layer_dict, AF, mapper_s):
-        AF_module = activation_module(AF)
+        # AF_module = activation_module(AF)
+        DNAC = DyanmicNameActivationClass('temp_name')
+        DNAC.__name__ = str(AF)
+        AF_module = DNAC(AF)
         replace_model_activations_2(layer_dict, AF_module, mapper_s)
 
 
@@ -60,7 +63,10 @@ class DeapEvolution():
             return (float('inf'),), temp_model 
 
         func, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
-        func_module = activation_module(func)
+        # func_module = activation_module(func)
+        DNAC = DyanmicNameActivationClass('temp_name')
+        DNAC.__name__ = str(individual)
+        func_module = DNAC(func)
 
         replace_model_activations_2(temp_layer_dict, func_module, mapper_s)
         print(str_ind)

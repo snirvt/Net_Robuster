@@ -24,7 +24,8 @@ setattr(layer_dict[0][0], layer_dict[0][1], nn.SELU())
 def save_activation_location(model, layer_dict):
     for child_name, child in model.named_children():
         activation_options = dir(torch.nn.modules.activation) + ['ACTIVATION_MODULE']
-        if child._get_name() in activation_options:
+        split_child_name = child._get_name().replace(')','(').split('(')
+        if child._get_name() in activation_options or any(i in activation_options for i in split_child_name if i !=''):
             layer_dict[len(layer_dict)] = [model, child_name, child]
         else:
             save_activation_location(child, layer_dict)
@@ -50,12 +51,28 @@ class activation_module(torch.nn.Module):
         super().__init__()
         self.activation = activation
         activation_module.__name__ = 'ACTIVATION_MODULE'
-        # activation_module.__name__ = str(self.activation)
+        # activation_module.type = str(self.activation)
         
     def __str__(self):
         return str(self.activation)
     def __call__(self, x):
         return self.activation(x)
+
+
+def DyanmicNameActivationClass(class_name):
+    class_str = '''class {}(torch.nn.Module):
+                        \n\tdef __init__(self,activation):
+                                \n\t\tsuper().__init__()
+                                \n\t\tself.activation = activation
+                                \n\t\tself.__name__ = str(self.activation)
+                                \n\t\tself.type = str(self.activation)
+                        \n\tdef __str__(self):
+                            \n\t\treturn str(self.activation)
+                        \n\tdef __call__(self, x):
+                            \n\t\treturn self.activation(x)
+                        '''
+    exec(class_str.format(class_name))
+    return eval('%s' % class_name)
 
 
 def create_root_tree(func):
