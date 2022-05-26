@@ -23,7 +23,7 @@ setattr(layer_dict[0][0], layer_dict[0][1], nn.SELU())
 # https://stackoverflow.com/questions/58297197/how-to-change-activation-layer-in-pytorch-pretrained-module
 def save_activation_location(model, layer_dict):
     for child_name, child in model.named_children():
-        activation_options = dir(torch.nn.modules.activation) + ['ACTIVATION_MODULE']
+        activation_options = dir(torch.nn.modules.activation) + ['ACTIVATION_MODULE', 'MAX', 'MIN', 'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'LOG', 'COS', 'SIN']
         split_child_name = child._get_name().replace(')','(').split('(')
         if child._get_name() in activation_options or any(i in activation_options for i in split_child_name if i !=''):
             layer_dict[len(layer_dict)] = [model, child_name, child]
@@ -87,3 +87,20 @@ def create_root_tree(func):
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("compile", gp.compile, pset=pset)
     return toolbox.population(n=1)
+
+
+def single_layer_mapper(layer_dict):
+    mapper = {0: range(0,len(layer_dict))}
+    return mapper
+
+def triple_mapper(layer_dict):
+    mapper = {0: range(0,1),
+              1:range(1,len(layer_dict)-1),
+              2:range(len(layer_dict)-1, len(layer_dict))}
+    return mapper
+
+def each_mapper(layer_dict):
+    mapper = {}
+    for i in layer_dict.keys():
+        mapper[i] = range(i,i+1)
+    return mapper
