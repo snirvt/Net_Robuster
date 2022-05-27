@@ -63,8 +63,9 @@ layer_dict = {}
 save_activation_location(model, layer_dict)
 
 mapper = each_mapper(layer_dict)
+ELITISM = 1
 N_RUNS = 1
-POP_SIZE = 10
+POP_SIZE = 1
 NUM_SPECIES = 3
 NGEN = 3
 CXPB = 0.4
@@ -108,14 +109,22 @@ for n in range(N_RUNS):
             offsprings_s = toolbox.select(pop_coop[s], len(pop_coop[s]))
             offsprings_s = [toolbox.clone(ind) for ind in offsprings_s]        
             offsprings_s = algorithms.varAnd(offsprings_s, toolbox, cxpb = CXPB, mutpb = MUTPB)
-            models = []
+            
+            if ELITISM > 0:
+                offsprings_s[:ELITISM] = tools.selBest(pop_coop[s], ELITISM)[:ELITISM]
+            
+            gen_models = []
+            gen_losses = []
             for ind in offsprings_s:
                 ind.fitness.values, ind_model = toolbox.evaluate(ind, mapper[s], best_coop)
-                models.append((ind.fitness.values, ind_model))
+                gen_losses.append(ind.fitness.values)
+                gen_models.append(ind_model)
             # Replace the old population by the offspring
             pop_coop[s] = offsprings_s
             best_coop[s] = tools.selBest(pop_coop[s], 1)[0]
-            best_gen_loss, best_gen_model = min(models)
+            best_model_idx = np.argmin(gen_losses)
+            best_gen_loss = gen_losses[best_model_idx]
+            best_gen_model = gen_models[best_model_idx]
             res_dict[(n,'loss')].append(best_gen_loss)
             
             if best_model_loss > best_gen_loss[0]:
