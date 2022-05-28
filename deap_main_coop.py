@@ -1,11 +1,9 @@
-
 import operator
 import math
 import random
 import numpy as np
 from copy import deepcopy
 import re
-
 import torch
 from torch import nn, tensor, Tensor
 from deap import algorithms
@@ -13,7 +11,6 @@ from deap import base
 from deap import creator
 from deap import tools
 from deap import gp
-
 from deap_primitives import get_primitive_set
 from CIFAR10 import CIFAR10Data
 from deap_evolution import DeapEvolution
@@ -64,24 +61,25 @@ save_activation_location(model, layer_dict)
 
 mapper = each_mapper(layer_dict)
 ELITISM = 1
-N_RUNS = 1
-POP_SIZE = 1
+N_RUNS = 3
+POP_SIZE = 10
 NUM_SPECIES = 3
 NGEN = 3
 CXPB = 0.4
 MUTPB = 0.4
+CREATE_ORIGINAL_AF_IND=False
 online_learning_AF = False
-CREATE_ORIGINAL_AF_IND=True
 online_learning_AF_WEIGHTS = True
 
 name = 'CIFAR10_coop_3_layers_from_0'
+
+debug = False
 
 try:
     res_dict = np.load('results/'+name+'.npy', allow_pickle=True).item()
 except:
     res_dict = {}
     np.save('results/'+name+'.npy',res_dict, allow_pickle=True)
-
 for n in range(N_RUNS):
     pop_coop = []
     best_coop = []
@@ -96,8 +94,8 @@ for n in range(N_RUNS):
             for layer in mapper[s]:
                 pop_coop[s].append(create_root_tree(layer_dict[layer][-1])[0])
         for ind in pop_coop[s]:
-            ind.fitness.values, _ = toolbox.evaluate(ind, mapper[s])
-        best_coop.append(tools.selBest(pop_coop[s], 1)[0])
+            ind.fitness.values, _ = toolbox.evaluate(model, ind, mapper[s], debug)
+        best_coop.append(tools.selBest(pop_coop[s], 1)[0]) # make first gen equal original 
 
     best_model = model
     best_model_loss = float('inf')
@@ -115,8 +113,9 @@ for n in range(N_RUNS):
             
             gen_models = []
             gen_losses = []
+            # print(model)
             for ind in offsprings_s:
-                ind.fitness.values, ind_model = toolbox.evaluate(ind, mapper[s], best_coop)
+                ind.fitness.values, ind_model = toolbox.evaluate(model, ind, mapper[s], debug)
                 gen_losses.append(ind.fitness.values)
                 gen_models.append(ind_model)
             # Replace the old population by the offspring
@@ -130,22 +129,31 @@ for n in range(N_RUNS):
             if best_model_loss > best_gen_loss[0]:
                 best_model = best_gen_model
                 best_model_loss = best_gen_loss[0]
-            
+                best_model_coop = deepcopy(best_coop)
             if online_learning_AF:
                 de.update_model_AF(layer_dict, best_coop[s], mapper[s])
             if online_learning_AF_WEIGHTS:
                 model = best_gen_model
-                de.model = model
+                de.set_model(model)
                 layer_dict = {}
                 save_activation_location(model, layer_dict)
     best_model_test_acc = get_test_score(best_model, test_dataloader)
     last_model_test_acc = get_test_score(model, test_dataloader)
-    res_dict[(n,'best_model')] = best_model
-    res_dict[(n,'best_model_acc')] = best_model_test_acc
-    res_dict[(n,'last_model')] = model
-    res_dict[(n,'last_model_acc')] = last_model_test_acc 
+    res_dict[(n,'best_coop')] = best_model_coop
+    res_dict[(n,'best_coop_acc')] = best_model_test_acc
+    res_dict[(n,'last_coop')] =  best_coop
+    res_dict[(n,'last_coop_acc')] = last_model_test_acc 
+    res_dict[(n,'best_model_str')] = str(best_model)
+    res_dict[(n,'last_model_str')] = str(model)
 
-np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
+# np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
+# torch.save(model.state_dict(), 'results/'+name+'_last_model_weights.pt')
+# torch.save(best_model.state_dict(), 'results/'+name+'_best_model_weights.pt')
+
+# load_np = np.load('results/'+name+'.npy', allow_pickle=True).item()
+# loaded_model = ConvNet_CIFAR10(inputs[0].shape)
+# loaded_model.load_state_dict(torch.load('results/'+name+'_last_model_weights.pt'))
+# loaded_model.eval()
 
 
 
