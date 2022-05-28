@@ -8,6 +8,7 @@ from deap_utils import replace_model_activations_2
 
 from deap_net import get_model_performance, network_score
 
+import random
 
 class DeapEvolution():
     def __init__(self, model, pset, train_dataloader, validation_dataloader):
@@ -16,8 +17,15 @@ class DeapEvolution():
         self.train_dataloader = train_dataloader
         self.validation_dataloader = validation_dataloader
 
+    def set_model(self, model):
+        self.model = model
+
     def update_model_AF(self, layer_dict, AF, mapper_s):
         # AF_module = activation_module(AF)
+
+        # str_ind = str(AF)
+        # func, code, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
+        # AF_module = activation_module(func, code, lambda_str_code)
         DNAC = DyanmicNameActivationClass('temp_name')
         DNAC.__name__ = str(AF)
         AF_module = DNAC(AF)
@@ -30,13 +38,13 @@ class DeapEvolution():
         alterd_code = deepcopy(code)
         if re.search(p, alterd_code) is not None:
             for catch in reversed(list(re.finditer(p, alterd_code))):
-                print(catch[0]) # catch is a match object
+                # print(catch[0]) # catch is a match object
                 alterd_code = alterd_code[:catch.start()]  + 'repeat(' + alterd_code[catch.start():catch.end()]  + ',x)' + alterd_code[catch.end():]
 
         args = ",".join(arg for arg in self.pset.arguments)
         lambda_str_code = "lambda {args}: {code}".format(args=args, code=alterd_code)
         self.pset.context['repeat'] = lambda scalar, x: Tensor([scalar]).repeat(x.shape) # every terminal will be reshaped to x
-        return eval(lambda_str_code, self.pset.context, {}), lambda_str_code
+        return eval(lambda_str_code, self.pset.context, {}), code, lambda_str_code
 
 
 
@@ -50,25 +58,29 @@ class DeapEvolution():
             return torch.tensor([float('inf')])
         return loss
 
-    def evaluate_AF_coop(self, individual, mapper_s, best_coop = []):
+    def evaluate_AF_coop(self, model, individual, mapper_s, debug = False):
         # global model
-        temp_model = deepcopy(self.model)
+        temp_model = deepcopy(model)
         temp_layer_dict = {}
         save_activation_location(temp_model, temp_layer_dict)
-
         # func = toolbox.compile(expr=individual)
         str_ind = str(individual)
         if 'x' not in str_ind:
             print('no x in individual')
             return (float('inf'),), temp_model 
 
-        func, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
-        # func_module = activation_module(func)
+        func, code, lambda_str_code = self.get_fixed_terminal_lambda(str_ind)
+        # func_module = activation_module(func, code, lambda_str_code)
         DNAC = DyanmicNameActivationClass('temp_name')
         DNAC.__name__ = str(individual)
         func_module = DNAC(func)
 
         replace_model_activations_2(temp_layer_dict, func_module, mapper_s)
+        # if len(best_coop) > 0:
+        #     print('hello')
+        # replace_model_activations_2(temp_layer_dict, func_module, mapper_s)
+        if debug:
+            return (random.random(),), temp_model
         print(str_ind)
         loss = self.train_neural_network(temp_model)
         return (loss,), temp_model
