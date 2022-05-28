@@ -23,9 +23,9 @@ setattr(layer_dict[0][0], layer_dict[0][1], nn.SELU())
 # https://stackoverflow.com/questions/58297197/how-to-change-activation-layer-in-pytorch-pretrained-module
 def save_activation_location(model, layer_dict):
     for child_name, child in model.named_children():
-        activation_options = dir(torch.nn.modules.activation) + ['ACTIVATION_MODULE', 'MAX', 'MIN', 'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'LOG', 'COS', 'SIN']
+        activation_options = dir(torch.nn.modules.activation) + ['activation_module', 'ACTIVATION_MODULE', 'MAX', 'MIN', 'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'LOG', 'COS', 'SIN']
         split_child_name = child._get_name().replace(')','(').split('(')
-        if child._get_name() in activation_options or any(i in activation_options for i in split_child_name if i !=''):
+        if child._get_name() in activation_options or child._get_name() == 'x' or any(i in activation_options for i in split_child_name if i !=''):
             layer_dict[len(layer_dict)] = [model, child_name, child]
         else:
             save_activation_location(child, layer_dict)
@@ -47,14 +47,16 @@ def get_pre_trained_model(device):
 
 
 class activation_module(torch.nn.Module):
-    def __init__(self, activation):
+    def __init__(self, activation, str_code, lambda_str_code):
         super().__init__()
         self.activation = activation
-        activation_module.__name__ = 'ACTIVATION_MODULE'
+        self.str_code = str_code
+        self.lambda_str_code = lambda_str_code
+        # activation_module.__name__ = 'ACTIVATION_MODULE'
         # activation_module.type = str(self.activation)
         
     def __str__(self):
-        return str(self.activation)
+        return str(self.str_code)
     def __call__(self, x):
         return self.activation(x)
 
