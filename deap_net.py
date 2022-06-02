@@ -1,7 +1,10 @@
 import numpy as np
 from copy import deepcopy
+import random
+
 import torch
 from torch import nn
+
 from art.attacks.evasion import FastGradientMethod
 from art.estimators.classification import PyTorchClassifier
 
@@ -39,7 +42,7 @@ def network_score(net, train_loader, val_loader, sample_size):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     net.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(net.parameters(), lr = 0.01)
+    optimizer = torch.optim.Adam(net.parameters(), lr = random.choice([0.01,0.005,0.001]))# 0.01, 0.005, 0.001
 
     epochs_train_acc = np.zeros(n_epochs)
     epochs_train_losses = np.zeros(n_epochs)
@@ -54,6 +57,8 @@ def network_score(net, train_loader, val_loader, sample_size):
         total = 0
         net.train()
         for i, (images, labels) in enumerate(train_loader):
+            # images = images[:10]
+            # labels = labels[:10] # save time for debuging
             # if total >= sample_size:
                 # break
             images = images.to(device)
@@ -79,7 +84,7 @@ def network_score(net, train_loader, val_loader, sample_size):
                 nb_classes=y_pred.shape[1],
             )
             attack = FastGradientMethod(estimator=classifier, eps=0.2)
-            x_attack = attack.generate(x=images.numpy())
+            x_attack = attack.generate(x=images.cpu().numpy())
             x_attack = torch.tensor(x_attack).to(device)
             optimizer.zero_grad()
             y_pred = net(x_attack)
@@ -103,6 +108,8 @@ def network_score(net, train_loader, val_loader, sample_size):
         net.eval()
         with torch.no_grad():
             for images, labels in val_loader:
+                # images = images[:10]
+                # labels = labels[:10] # save time for debuging
                 # if test_total >= sample_size:
                     # break
                 images = images.to(device)
@@ -118,7 +125,7 @@ def network_score(net, train_loader, val_loader, sample_size):
                 ### attack ###
 
                 with torch.enable_grad():
-                    x_attack = attack.generate(x=images.numpy())
+                    x_attack = attack.generate(x=images.cpu().numpy())
                 x_attack = torch.tensor(x_attack).to(device)
                 y_pred = net(x_attack)
                 test_loss = criterion(y_pred, labels.to(device))
@@ -172,7 +179,7 @@ def get_test_score(net, data_loader):
             attack = FastGradientMethod(estimator=classifier, eps=0.2)
 
             with torch.enable_grad():
-                x_attack = attack.generate(x=images.numpy())
+                x_attack = attack.generate(x=images.cpu().numpy())
             x_attack = torch.tensor(x_attack).to(device)
             y_pred = net(x_attack)
             # test_loss = criterion(y_pred, labels.to(device))
