@@ -25,7 +25,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # model = get_pre_trained_model(device)
 
 
-train_dataloader = CIFAR10Data().train_dataloader()
+train_dataloader, val_dataloader = CIFAR10Data().train_val_dataloader()
 test_dataloader = CIFAR10Data().test_dataloader()
 
 inputs, classes = next(iter(train_dataloader))  
@@ -61,13 +61,13 @@ save_activation_location(model, layer_dict)
 
 mapper = each_mapper(layer_dict)
 ELITISM = 1
-N_RUNS = 3
-POP_SIZE = 10
+N_RUNS = 30
+POP_SIZE = 33
 NUM_SPECIES = 3
-NGEN = 3
+NGEN = 50
 CXPB = 0.4
 MUTPB = 0.4
-CREATE_ORIGINAL_AF_IND=False
+CREATE_ORIGINAL_AF_IND=True
 online_learning_AF = False
 online_learning_AF_WEIGHTS = True
 
@@ -146,7 +146,7 @@ for n in range(N_RUNS):
     res_dict[(n,'best_model_str')] = str(best_model)
     res_dict[(n,'last_model_str')] = str(model)
 
-# np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
+np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
 # torch.save(model.state_dict(), 'results/'+name+'_last_model_weights.pt')
 # torch.save(best_model.state_dict(), 'results/'+name+'_best_model_weights.pt')
 
@@ -155,11 +155,23 @@ for n in range(N_RUNS):
 # loaded_model.load_state_dict(torch.load('results/'+name+'_last_model_weights.pt'))
 # loaded_model.eval()
 
+# check the images after attack V
+# learning rate V
+# break correlation between attack batches and regular batches V
+# add sigmoid to primitive V
+# split test V
 
 
+# save parameters more often
+# reduce population size, gnerations
+# after found best model, try regular training on it
 
+# compare to 1 level tree model
+# compare to random evolution
 
+# add diffrent epsilon size
 
+# diffrentiate attack and regular
 
 
 

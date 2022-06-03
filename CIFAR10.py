@@ -1,6 +1,6 @@
 import os
 import zipfile
-
+from copy import deepcopy
 import pytorch_lightning as pl
 import requests
 from torch.utils.data import DataLoader
@@ -8,6 +8,8 @@ from torchvision import transforms as T
 from torchvision.datasets import CIFAR10
 from tqdm import tqdm
 from argparse import ArgumentParser
+from torchvision import transforms as T
+import torch
 
 # https://github.com/huyvnphan/PyTorch_CIFAR10/blob/master/train.py
 
@@ -38,7 +40,7 @@ class CIFAR10Data(pl.LightningDataModule):
         parser.add_argument("--classifier", type=str, default="resnet18")
         parser.add_argument("--pretrained", type=int, default=0, choices=[0, 1])
         parser.add_argument("--precision", type=int, default=32, choices=[16, 32])
-        parser.add_argument("--batch_size", type=int, default=256)
+        parser.add_argument("--batch_size", type=int, default=2**11)
         parser.add_argument("--max_epochs", type=int, default=100)
         parser.add_argument("--num_workers", type=int, default=8)
         parser.add_argument("--gpu_id", type=str, default="3")
@@ -77,16 +79,8 @@ class CIFAR10Data(pl.LightningDataModule):
             zip_ref.extractall(directory_to_extract_to)
             print("Unzip file successful!")
 
-    def train_dataloader(self):
-        transform = T.Compose(
-            [
-                T.RandomCrop(32, padding=4),
-                T.RandomHorizontalFlip(),
-                T.ToTensor(),
-                T.Normalize(self.mean, self.std),
-            ]
-        )
-        dataset = CIFAR10(root=self.hparamss.data_dir, train=True, transform=transform, download=True)
+
+    def make_dataloader(self, dataset):
         dataloader = DataLoader(
             dataset,
             batch_size=self.hparamss.batch_size,
@@ -96,6 +90,23 @@ class CIFAR10Data(pl.LightningDataModule):
             pin_memory=True,
         )
         return dataloader
+
+    def train_val_dataloader(self):
+        transform = T.Compose(
+            [
+                T.RandomCrop(32, padding=4),
+                T.RandomHorizontalFlip(),
+                T.ToTensor(),
+                T.Normalize(self.mean, self.std),
+            ]
+        )
+        dataset = CIFAR10(root=self.hparamss.data_dir, train=True, transform=transform, download=True)
+        dataset_train, dataset_val = torch.utils.data.random_split(dataset, [25000, 25000])
+
+        dataloader_train = self.make_dataloader(dataset_train)
+        dataloader_val = self.make_dataloader(dataset_val)
+
+        return dataloader_train, dataloader_val
 
     def val_dataloader(self):
         transform = T.Compose(
