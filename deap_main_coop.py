@@ -60,18 +60,18 @@ layer_dict = {}
 save_activation_location(model, layer_dict)
 
 mapper = each_mapper(layer_dict)
-ELITISM = 0
-N_RUNS = 1
-POP_SIZE = 1
+ELITISM = 1
+N_RUNS = 30
+POP_SIZE = 10
 NUM_SPECIES = 3
-NGEN = 1
-CXPB = 0.4
-MUTPB = 0.4
+NGEN = 20
+CXPB = 0.5
+MUTPB = 0.5
 CREATE_ORIGINAL_AF_IND=True
 online_learning_AF = False
 online_learning_AF_WEIGHTS = True
 epsilon = 0.2
-name = 'CIFAR10_coop_{}_layers_eps_{}_from_0'.format(NUM_SPECIES, epsilon)
+name = 'CIFAR10_coop_species_{}_layers_{}_eps_{}_from_0'.format(NUM_SPECIES,3, epsilon)
 
 debug = False
 
@@ -83,6 +83,8 @@ except:
 for n in range(N_RUNS):
     pop_coop = []
     best_coop = []
+    train_dataloader, val_dataloader = CIFAR10Data().train_val_dataloader()
+    test_dataloader = CIFAR10Data().test_dataloader()
     model = ConvNet_CIFAR10(inputs[0].shape)
     de = DeapEvolution(model, pset, train_dataloader, val_dataloader, epsilon)
     layer_dict = {}

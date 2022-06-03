@@ -101,7 +101,7 @@ class CIFAR10Data(pl.LightningDataModule):
             ]
         )
         dataset = CIFAR10(root=self.hparamss.data_dir, train=True, transform=transform, download=True)
-        dataset_train, dataset_val = torch.utils.data.random_split(dataset, [25000, 25000])
+        dataset_train, dataset_val = torch.utils.data.random_split(dataset, [35000, 15000])
 
         dataloader_train = self.make_dataloader(dataset_train)
         dataloader_val = self.make_dataloader(dataset_val)
