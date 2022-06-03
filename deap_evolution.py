@@ -11,11 +11,12 @@ from deap_net import get_model_performance, network_score
 import random
 
 class DeapEvolution():
-    def __init__(self, model, pset, train_dataloader, validation_dataloader):
+    def __init__(self, model, pset, train_dataloader, validation_dataloader,epsilon=0.2):
         self.model = model
         self.pset = pset
         self.train_dataloader = train_dataloader
         self.validation_dataloader = validation_dataloader
+        self.epsilon = epsilon
 
     def set_model(self, model):
         self.model = model
@@ -48,11 +49,11 @@ class DeapEvolution():
 
 
 
-    def train_neural_network(self, net):
+    def train_neural_network(self, net, epsilon):
         try:
             # loss, _ = get_model_performance(temp_model, self.train_dataloader, sample_size=256)
             loss, acc = network_score(net = net, train_loader = self.train_dataloader,
-             val_loader = self.validation_dataloader, sample_size=256)
+             val_loader = self.validation_dataloader, epsilon=epsilon, sample_size=256)
         except:
             print('exception in train_neural_network')
             return torch.tensor([float('inf')])
@@ -82,7 +83,7 @@ class DeapEvolution():
         if debug:
             return (random.random(),), temp_model
         print(str_ind)
-        loss = self.train_neural_network(temp_model)
+        loss = self.train_neural_network(temp_model, self.epsilon)
         return (loss,), temp_model
 
 

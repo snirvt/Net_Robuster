@@ -37,7 +37,7 @@ def get_model_performance(model, dataloader, sample_size = float('inf'), print_v
 
 
 
-def network_score(net, train_loader, val_loader, sample_size):
+def network_score(net, train_loader, val_loader, epsilon, sample_size):
     n_epochs = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     net.to(device)
@@ -87,7 +87,7 @@ def network_score(net, train_loader, val_loader, sample_size):
                 input_shape=tuple(images.shape[1:]),#(3, 32, 32),
                 nb_classes=y_pred.shape[1],
             )
-            attack = FastGradientMethod(estimator=classifier, eps=0.2)
+            attack = FastGradientMethod(estimator=classifier, eps=epsilon)
             x_attack = attack.generate(x=att_images.cpu().numpy())
             x_attack = torch.tensor(x_attack).to(device)
             optimizer.zero_grad()
@@ -154,7 +154,7 @@ def network_score(net, train_loader, val_loader, sample_size):
 
 
 
-def get_test_score(net, data_loader):
+def get_test_score(net, data_loader, epsilon):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     net.eval()
     criterion = nn.CrossEntropyLoss()
@@ -180,7 +180,7 @@ def get_test_score(net, data_loader):
                 nb_classes=y_pred.shape[1],
             )
             
-            attack = FastGradientMethod(estimator=classifier, eps=0.2)
+            attack = FastGradientMethod(estimator=classifier, eps=epsilon)
 
             with torch.enable_grad():
                 x_attack = attack.generate(x=images.cpu().numpy())

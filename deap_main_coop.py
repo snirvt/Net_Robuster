@@ -36,7 +36,7 @@ creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
 
 pset = get_primitive_set()
 
-de = DeapEvolution(model, pset, train_dataloader, test_dataloader)
+de = DeapEvolution(model, pset, train_dataloader, val_dataloader)
 
 
 toolbox = base.Toolbox()
@@ -60,17 +60,17 @@ layer_dict = {}
 save_activation_location(model, layer_dict)
 
 mapper = each_mapper(layer_dict)
-ELITISM = 1
-N_RUNS = 30
-POP_SIZE = 33
+ELITISM = 0
+N_RUNS = 1
+POP_SIZE = 1
 NUM_SPECIES = 3
-NGEN = 50
+NGEN = 1
 CXPB = 0.4
 MUTPB = 0.4
 CREATE_ORIGINAL_AF_IND=True
 online_learning_AF = False
 online_learning_AF_WEIGHTS = True
-
+epsilon = 0.2
 name = 'CIFAR10_coop_3_layers_from_0'
 
 debug = False
@@ -84,7 +84,7 @@ for n in range(N_RUNS):
     pop_coop = []
     best_coop = []
     model = ConvNet_CIFAR10(inputs[0].shape)
-    de = DeapEvolution(model, pset, train_dataloader, test_dataloader)
+    de = DeapEvolution(model, pset, train_dataloader, val_dataloader, epsilon)
     layer_dict = {}
     save_activation_location(model, layer_dict)
 
@@ -97,7 +97,8 @@ for n in range(N_RUNS):
             ind.fitness.values, _ = toolbox.evaluate(model, ind, mapper[s], debug)
         best_coop.append(tools.selBest(pop_coop[s], 1)[0]) # make first gen equal original 
 
-    best_model = model
+    best_model = deepcopy(model)
+    best_model_coop = deepcopy(best_coop)
     best_model_loss = float('inf')
     res_dict[(n,'loss')] = []
 
@@ -137,8 +138,8 @@ for n in range(N_RUNS):
                 de.set_model(model)
                 layer_dict = {}
                 save_activation_location(model, layer_dict)
-    best_model_test_acc = get_test_score(best_model, test_dataloader)
-    last_model_test_acc = get_test_score(model, test_dataloader)
+    best_model_test_acc = get_test_score(best_model, test_dataloader, epsilon)
+    last_model_test_acc = get_test_score(model, test_dataloader, epsilon)
     res_dict[(n,'best_coop')] = best_model_coop
     res_dict[(n,'best_coop_acc')] = best_model_test_acc
     res_dict[(n,'last_coop')] =  best_coop
@@ -146,7 +147,7 @@ for n in range(N_RUNS):
     res_dict[(n,'best_model_str')] = str(best_model)
     res_dict[(n,'last_model_str')] = str(model)
 
-np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
+# np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
 # torch.save(model.state_dict(), 'results/'+name+'_last_model_weights.pt')
 # torch.save(best_model.state_dict(), 'results/'+name+'_best_model_weights.pt')
 
@@ -160,6 +161,7 @@ np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
 # break correlation between attack batches and regular batches V
 # add sigmoid to primitive V
 # split test V
+# add diffrent epsilon size V
 
 
 # save parameters more often
@@ -169,7 +171,6 @@ np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
 # compare to 1 level tree model
 # compare to random evolution
 
-# add diffrent epsilon size
 
 # diffrentiate attack and regular
 
