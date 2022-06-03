@@ -79,7 +79,7 @@ def DyanmicNameActivationClass(class_name):
 
 def create_root_tree(func):
     pset = gp.PrimitiveSet("MAIN", 1)
-    pset.addPrimitive(func, 1, name=str(func).replace('(','').replace(')','').upper())
+    pset.addPrimitive(func, 1, name=str(func).replace('(','').replace(')',''))
     pset.renameArguments(ARG0='x')
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
     creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
