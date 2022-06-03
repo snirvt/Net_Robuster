@@ -62,13 +62,17 @@ def network_score(net, train_loader, val_loader, sample_size):
             # if total >= sample_size:
                 # break
             images = images.to(device)
+            reg_images = images[:int(len(images)/2)]
+            reg_labels = labels[:int(len(images)/2)]
+            att_images = images[int(len(images)/2):]
+            att_labels = labels[int(len(images)/2):]
             optimizer.zero_grad()
-            y_pred = net(images)
-            train_loss = criterion(y_pred, labels.to(device))
+            y_pred = net(reg_images)
+            train_loss = criterion(y_pred, reg_labels.to(device))
 
             predictions = torch.argmax(y_pred, dim=1)
-            total += labels.shape[0]
-            correct += torch.sum((predictions == labels.to(device)).int())
+            total += reg_labels.shape[0]
+            correct += torch.sum((predictions == reg_labels.to(device)).int())
 
             train_batch_loss += train_loss.item()
             train_loss.backward()
@@ -84,14 +88,14 @@ def network_score(net, train_loader, val_loader, sample_size):
                 nb_classes=y_pred.shape[1],
             )
             attack = FastGradientMethod(estimator=classifier, eps=0.2)
-            x_attack = attack.generate(x=images.cpu().numpy())
+            x_attack = attack.generate(x=att_images.cpu().numpy())
             x_attack = torch.tensor(x_attack).to(device)
             optimizer.zero_grad()
             y_pred = net(x_attack)
-            train_loss = criterion(y_pred, labels.to(device))
+            train_loss = criterion(y_pred, att_labels.to(device))
             predictions = torch.argmax(y_pred, dim=1)
-            total += labels.shape[0]
-            correct += torch.sum((predictions == labels.to(device)).int())
+            total += att_labels.shape[0]
+            correct += torch.sum((predictions == att_labels.to(device)).int())
             train_batch_loss += train_loss.item()
             train_loss.backward()
             optimizer.step()
