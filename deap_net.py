@@ -51,10 +51,15 @@ def network_score(net, train_loader, val_loader, epsilon, sample_size):
 
 
     for epoch in range(n_epochs):
+        train_reg_loss = 0
+        train_att_loss = 0
         train_batch_loss = 0
         test_batch_loss = 0
+        correct_reg = 0
+        correct_att = 0
         correct = 0
-        total = 0
+        total_reg = 0
+        total_att = 0
         net.train()
         for i, (images, labels) in enumerate(train_loader):
             # images = images[:10]
@@ -71,10 +76,10 @@ def network_score(net, train_loader, val_loader, epsilon, sample_size):
             train_loss = criterion(y_pred, reg_labels.to(device))
 
             predictions = torch.argmax(y_pred, dim=1)
-            total += reg_labels.shape[0]
-            correct += torch.sum((predictions == reg_labels.to(device)).int())
+            total_reg += reg_labels.shape[0]
+            correct_reg += torch.sum((predictions == reg_labels.to(device)).int())
 
-            train_batch_loss += train_loss.item()
+            train_reg_loss += train_loss.item()
             train_loss.backward()
             optimizer.step()
 
@@ -94,20 +99,28 @@ def network_score(net, train_loader, val_loader, epsilon, sample_size):
             y_pred = net(x_attack)
             train_loss = criterion(y_pred, att_labels.to(device))
             predictions = torch.argmax(y_pred, dim=1)
-            total += att_labels.shape[0]
-            correct += torch.sum((predictions == att_labels.to(device)).int())
-            train_batch_loss += train_loss.item()
+            total_att += att_labels.shape[0]
+            correct_att += torch.sum((predictions == att_labels.to(device)).int())
+            train_att_loss += train_loss.item()
             train_loss.backward()
             optimizer.step()
 
 
         epochs_train_losses[epoch] = train_batch_loss / len(train_loader)
-        epochs_train_acc[epoch] = correct / total
-        print(f'Training loss for epoch #{epoch}: {epochs_train_losses[epoch]:.4f}')
+        epochs_train_acc[epoch] = (correct_reg + correct_att) / (total_reg + total_att)
+        # print(f'Training regular loss for epoch #{epoch}: {train_reg_loss/total_reg:.4f}')
+        print(f'Training regular acc for epoch #{epoch}: {correct_reg/total_reg:.4f}')
+        # print(f'Training attack loss for epoch #{epoch}: {train_att_loss/total_reg:.4f}')
+        print(f'Training attack acc for epoch #{epoch}: {correct_att/total_att:.4f}')
+        # print(f'Training loss for epoch #{epoch}: {epochs_train_losses[epoch]:.4f}')
         print(f'Training accuracy for epoch #{epoch}: {epochs_train_acc[epoch]:.4f}')
 
-        test_total = 0
-        test_true = 0
+        test_loss_reg = 0
+        test_loss_att = 0
+        test_total_reg = 0
+        test_total_att = 0
+        test_true_reg = 0
+        test_true_att = 0
 
         net.eval()
         with torch.no_grad():
@@ -120,11 +133,11 @@ def network_score(net, train_loader, val_loader, epsilon, sample_size):
                 y_pred = net(images)
 
                 predictions = torch.argmax(y_pred, dim = 1)
-                test_total += labels.shape[0]
-                test_true += torch.sum((predictions == labels.to(device)).int())
+                test_total_reg += labels.shape[0]
+                test_true_reg += torch.sum((predictions == labels.to(device)).int())
 
                 test_loss = criterion(y_pred, labels.to(device))
-                test_batch_loss += test_loss.item()
+                test_loss_reg += test_loss.item()
 
                 ### attack ###
 
@@ -134,16 +147,17 @@ def network_score(net, train_loader, val_loader, epsilon, sample_size):
                 y_pred = net(x_attack)
                 test_loss = criterion(y_pred, labels.to(device))
                 predictions = torch.argmax(y_pred, dim=1)
-                test_total += labels.shape[0]
-                test_true += torch.sum((predictions == labels.to(device)).int())
-                test_batch_loss += test_loss.item()
+                test_total_att += labels.shape[0]
+                test_true_att += torch.sum((predictions == labels.to(device)).int())
+                test_loss_att += test_loss.item()
 
-
-
-
-            epochs_test_losses[epoch] = test_batch_loss / len(val_loader)
-            epochs_test_acc[epoch] = test_true / test_total
-            print(f'Test loss for epoch #{epoch}: {epochs_test_losses[epoch]:.4f}')
+            epochs_test_losses[epoch] = (test_loss_reg + test_loss_att) / len(val_loader)
+            epochs_test_acc[epoch] = (test_true_reg + test_true_att) / (test_total_reg + test_total_att)
+            # print(f'Test reg loss for epoch #{epoch}: {test_loss_reg/test_total_reg:.4f}')
+            print(f'Test regular acc for epoch #{epoch}: {test_true_reg/test_total_reg:.4f}')
+            # print(f'Test att loss for epoch #{epoch}: {test_loss_att/test_total_att:.4f}')
+            print(f'Test att acc for epoch #{epoch}: {test_true_att/test_total_att:.4f}')
+            # print(f'Test loss for epoch #{epoch}: {epochs_test_losses[epoch]:.4f}')
             print(f'Test accuracy for epoch #{epoch}: {epochs_test_acc[epoch]:.4f}')
 
     # print_losses_acc_to_file(file_name, epochs_train_losses, epochs_test_losses, epochs_train_acc, epochs_test_acc, mode_flag)
