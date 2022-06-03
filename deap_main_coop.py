@@ -71,7 +71,7 @@ CREATE_ORIGINAL_AF_IND=True
 online_learning_AF = False
 online_learning_AF_WEIGHTS = True
 epsilon = 0.2
-name = 'CIFAR10_coop_3_layers_from_0'
+name = 'CIFAR10_coop_{}_layers_eps_{}_from_0'.format(NUM_SPECIES, epsilon)
 
 debug = False
 
@@ -146,6 +146,9 @@ for n in range(N_RUNS):
     res_dict[(n,'last_coop_acc')] = last_model_test_acc 
     res_dict[(n,'best_model_str')] = str(best_model)
     res_dict[(n,'last_model_str')] = str(model)
+    torch.save(model.state_dict(), 'results/'+name+'_{}_last_model_weights.pt'.format(n))
+    torch.save(best_model.state_dict(), 'results/'+name+'_{}_best_model_weights.pt'.format(n))
+    np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
 
 # np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
 # torch.save(model.state_dict(), 'results/'+name+'_last_model_weights.pt')
@@ -156,23 +159,13 @@ for n in range(N_RUNS):
 # loaded_model.load_state_dict(torch.load('results/'+name+'_last_model_weights.pt'))
 # loaded_model.eval()
 
-# check the images after attack V
-# learning rate V
-# break correlation between attack batches and regular batches V
-# add sigmoid to primitive V
-# split test V
-# add diffrent epsilon size V
 
-
-# save parameters more often
 # reduce population size, gnerations
 # after found best model, try regular training on it
-
 # compare to 1 level tree model
 # compare to random evolution
 
 
-# diffrentiate attack and regular
 
 
 
