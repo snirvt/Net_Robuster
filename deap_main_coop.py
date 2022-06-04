@@ -17,7 +17,7 @@ from deap_evolution import DeapEvolution
 from neural_network import ConvNet_CIFAR10
 from deap_net import get_test_score
 from deap_utils import get_pre_trained_model
-from deap_utils import create_root_tree, each_mapper
+from deap_utils import each_mapper
 from deap_utils import save_activation_location, replace_model_activations, activation_module
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -52,6 +52,18 @@ toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register('mutate', gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 
 
+def create_root_tree(func):
+    temp_pset = gp.PrimitiveSet("MAIN", 1)
+    # func = layer_dict[layer][-1]
+    temp_pset.addPrimitive(func, 1, name=str(func).replace('(','').replace(')',''))
+    temp_pset.renameArguments(ARG0='x')
+    toolbox.register("expr", gp.genHalfAndHalf, pset=temp_pset, min_=1, max_=1)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
+    return toolbox.individual()
+
+def reset_tool_box():
+    toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=1, max_=4)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
 
 
 
@@ -62,16 +74,16 @@ save_activation_location(model, layer_dict)
 mapper = each_mapper(layer_dict)
 ELITISM = 1
 N_RUNS = 30
-POP_SIZE = 10
+POP_SIZE = 14
 NUM_SPECIES = 3
-NGEN = 20
+NGEN = 25
 CXPB = 0.5
 MUTPB = 0.5
 CREATE_ORIGINAL_AF_IND=True
 online_learning_AF = False
 online_learning_AF_WEIGHTS = True
 epsilon = 0.2
-name = 'CIFAR10_coop_species_{}_layers_{}_eps_{}_from_0'.format(NUM_SPECIES,3, epsilon)
+name = 'CIFAR10_coop_species_{}_layers_{}_eps_{}_ELITISM_{}_from_0'.format(NUM_SPECIES,3, str(epsilon).replace('.',''), ELITISM)
 
 debug = False
 
@@ -81,6 +93,8 @@ except:
     res_dict = {}
     np.save('results/'+name+'.npy',res_dict, allow_pickle=True)
 for n in range(N_RUNS):
+    key = len(res_dict)
+    res_dict[key] = {}
     pop_coop = []
     best_coop = []
     train_dataloader, val_dataloader = CIFAR10Data().train_val_dataloader()
@@ -94,7 +108,9 @@ for n in range(N_RUNS):
         pop_coop.append(toolbox.population(n=POP_SIZE))
         if CREATE_ORIGINAL_AF_IND:
             for layer in mapper[s]:
-                pop_coop[s].append(create_root_tree(layer_dict[layer][-1])[0])
+                pop_coop[s].append(create_root_tree(layer_dict[layer][-1]))
+            reset_tool_box()
+
         for ind in pop_coop[s]:
             ind.fitness.values, _ = toolbox.evaluate(model, ind, mapper[s], debug)
         best_coop.append(tools.selBest(pop_coop[s], 1)[0]) # make first gen equal original 
@@ -102,8 +118,7 @@ for n in range(N_RUNS):
     best_model = deepcopy(model)
     best_model_coop = deepcopy(best_coop)
     best_model_loss = float('inf')
-    res_dict[(n,'loss')] = []
-
+    res_dict[key]['loss'] = []
     for g in range(1, NGEN):
         for s in range(NUM_SPECIES):
             # Select and clone the offspring
@@ -127,8 +142,9 @@ for n in range(N_RUNS):
             best_model_idx = np.argmin(gen_losses)
             best_gen_loss = gen_losses[best_model_idx]
             best_gen_model = gen_models[best_model_idx]
-            res_dict[(n,'loss')].append(best_gen_loss)
-            
+
+            res_dict[key]['loss'].append(best_gen_loss)
+
             if best_model_loss > best_gen_loss[0]:
                 best_model = best_gen_model
                 best_model_loss = best_gen_loss[0]
@@ -142,14 +158,14 @@ for n in range(N_RUNS):
                 save_activation_location(model, layer_dict)
     best_model_test_acc = get_test_score(best_model, test_dataloader, epsilon)
     last_model_test_acc = get_test_score(model, test_dataloader, epsilon)
-    res_dict[(n,'best_coop')] = best_model_coop
-    res_dict[(n,'best_coop_acc')] = best_model_test_acc
-    res_dict[(n,'last_coop')] =  best_coop
-    res_dict[(n,'last_coop_acc')] = last_model_test_acc 
-    res_dict[(n,'best_model_str')] = str(best_model)
-    res_dict[(n,'last_model_str')] = str(model)
-    torch.save(model.state_dict(), 'results/'+name+'_{}_last_model_weights.pt'.format(n))
-    torch.save(best_model.state_dict(), 'results/'+name+'_{}_best_model_weights.pt'.format(n))
+    res_dict[key]['best_coop'] = best_model_coop
+    res_dict[key]['best_coop_acc'] = best_model_test_acc
+    res_dict[key]['last_coop'] = best_coop
+    res_dict[key]['last_coop_acc'] = last_model_test_acc
+    res_dict[key]['best_model_str'] = str(best_model)
+    res_dict[key]['last_model_str'] = str(model)
+    torch.save(model.state_dict(), 'results/'+name+'_{}_last_model_weights.pt'.format(key))
+    torch.save(best_model.state_dict(), 'results/'+name+'_{}_best_model_weights.pt'.format(key))
     np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
 
 # np.save('results/'+name+'.npy', res_dict, allow_pickle=True)
